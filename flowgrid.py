@@ -2427,7 +2427,8 @@ class CMG(FlowGrid):
                     data = np.array(self.out_props[prop][t], order='F')
                     # Save to Numpy
                     if toNumpy:
-                        self.export_prop(data, prop, tID)
+                        # self.export_prop(data, prop, tID)
+                        self.export_prop(data, prop, t)
                     # Add property data to vts structured grid
                     if toVTK:
                         propIds = self._prep_vtk(data, prop, propIds)
@@ -2435,7 +2436,8 @@ class CMG(FlowGrid):
             if toVTK:
                 if tID == 0:
                     self._check_out('vtk')
-                self.exportVTK(os.path.join(self.out_dir, 'vtk', vtk_fname + str(tID)))
+                # self.exportVTK(os.path.join(self.out_dir, 'vtk', vtk_fname + str(tID)))
+                self.exportVTK(os.path.join(self.out_dir, 'vtk', vtk_fname + str(t)))
                 for id in propIds:
                     self.Grid.GetCellData().RemoveArray(id)
             tID += 1
