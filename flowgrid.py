@@ -6,13 +6,10 @@ import string
 import copy
 import math
 
-from scipy.sparse import csr_matrix
-
 from mpl_toolkits.mplot3d import axes3d
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
 
-from pyevtk.hl import pointsToVTK
 import vtk
 
 # import pkg_resources  # part of setuptools
@@ -41,10 +38,12 @@ class FlowGrid(object):
         """
         Get xyz coordinates for each vertex of a cell
         Grid geometry must be constructed first
+
         Parameters
         ----------
         idx : array_like of int
             (Size 3) ijk indices of a cell, starting at 1
+
         Returns
         -------
         coords : array_like of array_like of float
@@ -64,10 +63,12 @@ class FlowGrid(object):
     def centroid(self, coords):
         """
         Compute center coordinates of cell
+
         Parameters
         ----------
         coords : array_like of array_like of float
              (Size 6) Vertex coordinates of cell
+
         Returns
         -------
         center : array_like of float
@@ -440,34 +441,35 @@ class GRDECL(FlowGrid):
         # Convert to VTK
         self.GridType = "vtkStructuredGrid"
         self.Grid = vtk.vtkStructuredGrid()
-        self.Grid.SetDimensions(self.ne + 1, self.nn + 1, self.nz + 1)
+        self.Grid.SetDimensions(self.ne+1, self.nn+1, self.nz+1)
         vtk_points = vtk.vtkPoints()
         ve = 1.
 
         for iz in range(self.nz):
             if iz == 0:
-                for iy in range(self.nn + 1):
-                    for ix in range(self.ne + 1):
-                        vtk_points.InsertNextPoint(self.X0[ix, iy], \
-                                                   self.Y0[ix, iy], \
-                                                   ve * self.ZZT[iz][ix, iy])
-            for iy in range(self.nn + 1):
-                for ix in range(self.ne + 1):
-                    vtk_points.InsertNextPoint(self.X0[ix, iy], \
-                                               self.Y0[ix, iy], \
-                                               ve * self.ZZB[iz][ix, iy])
+                for iy in range(self.nn+1):
+                    for ix in range(self.ne+1):
+                        vtk_points.InsertNextPoint( self.X0[ix,iy], \
+                                                    self.Y0[ix,iy], \
+                                               ve * self.ZZT[iz][ix,iy] )
+            for iy in range(self.nn+1):
+                for ix in range(self.ne+1):
+                    vtk_points.InsertNextPoint( self.X0[ix,iy], \
+                                                self.Y0[ix,iy], \
+                                           ve * self.ZZB[iz][ix,iy] )
         self.Grid.SetPoints(vtk_points)
 
         # Add in active cells
         ac = vtk.vtkIntArray()
-        ac.SetName("ActiveCells")
-        for iac in self.ActiveCells.flatten(order='F'):
-            ac.InsertNextTuple1(iac)
+        ac.SetName( "ActiveCells" )
+        for iac in self.ActiveCells.flatten( order='F' ):
+            ac.InsertNextTuple1( iac )
         self.Grid.GetCellData().AddArray(ac)
 
     def buildGrid(self, plot=False):
         """
         Topology of COORD mesh, only describes first layer..
+
                   8--------10-------12-------14
                  /|       /|       /|       /|
                 / |      / |      / |      / |
@@ -498,13 +500,13 @@ class GRDECL(FlowGrid):
         print(self.points["e"])
 
         # Here are the coordinates
-        self.X0 = np.reshape(self.points["e"][0::2], (self.ndx, self.ndy), order="F")
-        self.Y0 = np.reshape(self.points["n"][0::2], (self.ndx, self.ndy), order="F")
-        self.Z0 = np.reshape(self.points["z"][0::2], (self.ndx, self.ndy), order="F")
+        self.X0 = np.reshape(self.points["e"][0::2] , (self.ndx,self.ndy), order="F")
+        self.Y0 = np.reshape(self.points["n"][0::2] , (self.ndx,self.ndy), order="F")
+        self.Z0 = np.reshape(self.points["z"][0::2] , (self.ndx,self.ndy), order="F")
 
-        self.X1 = np.reshape(self.points["e"][1::2], (self.ndx, self.ndy), order="F")
-        self.Y1 = np.reshape(self.points["n"][1::2], (self.ndx, self.ndy), order="F")
-        self.Z1 = np.reshape(self.points["z"][1::2], (self.ndx, self.ndy), order="F")
+        self.X1 = np.reshape(self.points["e"][1::2] , (self.ndx,self.ndy), order="F")
+        self.Y1 = np.reshape(self.points["n"][1::2] , (self.ndx,self.ndy), order="F")
+        self.Z1 = np.reshape(self.points["z"][1::2] , (self.ndx,self.ndy), order="F")
         #
         # # visualize
         # if plot:
@@ -519,6 +521,7 @@ class GRDECL(FlowGrid):
         """
             Petrel provides the ZCORN in a truly arcane ordering--it's awful--and really, the programmers
             deserve a special place in hell for doing this. The ordering is as follows, for a given plane:
+
              29    36  30   37 31    38 32    39 33    40 34    41 35    42
               _______  _______  ______  _______  _______  _______  _______
              /      / /      / /     / /      / /      / /      / /      /|
@@ -526,8 +529,11 @@ class GRDECL(FlowGrid):
            00----01 02----03 04----05 06----07 08----09 10----11 12----13 /
             |  A  | |  B   | |   C  | |   D  | |   E  | |  F   | |   G  |/
            14----15 16----17 18----19 20----21 22----23 24----25 26----27
+
+
             This pattern is then repeated for each depth layer, it isn't that clear, but my ASCII art skills
             are already sufficiently challenged.
+
         """
 
         print("Constructing Z corners")
@@ -553,8 +559,10 @@ class GRDECL(FlowGrid):
         plt.plot(newtemp[0,:])                    # TOP     0    0
         plt.plot(newtemp[1,:])       # SAME --    # BOTTOM  0    1
         #plt.plot(newtemp[2,:])      # SAME --    # TOP     1    2
+
         plt.plot(newtemp[3,:])       # SAME --    # BOTTOM  1    3
         #plt.plot(newtemp[4,:])      # SAME --    # TOP     2    4
+
         plt.plot(newtemp[5,:])       # SAME --    # BOTTOM  2    5
         #plt.plot(newtemp[6,:])      # SAME --    # TOP     3    6
         plt.plot(newtemp[7,:])                    # BOTTOM  3    7
@@ -767,10 +775,13 @@ class GRDECL(FlowGrid):
     def read_outputs(self, fname, prop_strings, toVTK=True, toNumpy=True):
         """
         Reads per-cell properties from .PRT file for all timesteps
+
         Pack property keywords to read from .PRT into list of lists
         This saves significant time for large grids as only one pass is required through .PRT file
         Inner lists should contain keywords that enable line denoting property section to be uniquely identified
+
         :param prop_strings: [[ECL prop keyword, subkey1, subkey2, ...], ...]
+
         Order props as they appear in .PRT file
         """
         print('Reading output properties\n')
@@ -803,7 +814,7 @@ class GRDECL(FlowGrid):
                             J = int(idxs[1])
                             K = int(idxs[2])
                             vals = line.split(')')[1].split()
-                            for c, I in enumerate(II):
+                            for c,I in enumerate(II):
                                 if '-' in vals[c]:
                                     vals[c] = 0
                                 idx = ((self.ne * self.nn) * (K - 1)) + (self.ne * (J - 1)) + (I - 1)
@@ -824,7 +835,7 @@ class GRDECL(FlowGrid):
                                         if t == 0:
                                             self._check_out(pn)
                                         grid_data = np.reshape(data, (self.ne, self.nn, self.nz), order="F")
-                                        np.save(os.path.join(self.out_dir, pn, pn + '_' + str(t)), grid_data)
+                                        np.savez_compressed(os.path.join(self.out_dir, pn, pn + '_' + str(t)), grid_data)
                                     if toVTK:
                                         if t == 0:
                                             self._check_out('vtk')
@@ -835,9 +846,7 @@ class GRDECL(FlowGrid):
                                         id = self.Grid.GetCellData().AddArray(ac)
                                         ids.append(id)
                                 if toVTK:
-                                    self.exportVTK(os.path.join(self.out_dir, 'vtk',
-                                                                os.path.basename(os.path.splitext(fname_out)[0],
-                                                                                 str(t))))
+                                    self.exportVTK(os.path.join(self.out_dir, 'vtk', os.path.basename(os.path.splitext(fname_out)[0], str(t))))
                                     for id in ids:
                                         self.Grid.GetCellData().RemoveArray(id)
                                 prop_idx = 0
@@ -893,8 +902,8 @@ class GRDECL(FlowGrid):
                     if item[0] == 'TIME':
                         keyOrder = {}
                         # if time found, then keys might be on this same line
-                        for j, key in enumerate(keys):
-                            for i, var in enumerate(item):
+                        for j,key in enumerate(keys):
+                            for i,var in enumerate(item):
                                 if key == var:
                                     if i in keyOrder:
                                         keyOrder[i].append(key)
@@ -913,7 +922,7 @@ class GRDECL(FlowGrid):
     def export_prop(self, title, prop):
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
-        np.save(os.path.join(self.out_dir, title), prop)
+        np.savez_compressed(os.path.join(self.out_dir, title), prop)
 
 
 class SUTRA(FlowGrid):
@@ -1048,7 +1057,6 @@ class CMG(FlowGrid):
     """
     For handling CMG files
     """
-
     def __init__(self):
         super(CMG, self).__init__()
         self.out_dir = 'output'
@@ -1057,6 +1065,7 @@ class CMG(FlowGrid):
     def CORNER(self, fname, cp_type):
         """
         Builds corner point grid (*GRID *CORNER) geometry from a CMG file
+
         Parameters
         ----------
         fname : str
@@ -1067,6 +1076,7 @@ class CMG(FlowGrid):
                 Available options are ['CORNERS'] or ['ZCORN', subkey_x, subkey_y]
                     subkey_x options are 'DI' or 'XCORN' (TODO: Implement XCORN)
                     subkey_y options are 'DJ' or 'YCORN' (TODO: Implement YCORN)
+
             Support has not been added for 'COORD'
         """
         print('Building corner point grid')
@@ -1125,6 +1135,7 @@ class CMG(FlowGrid):
     def CART(self, fname):
         """
         Build cartesian grid (*GRID *CART) from CMG file
+
         Parameters
         ----------
         fname : str
@@ -1148,23 +1159,28 @@ class CMG(FlowGrid):
             k_spacing = 0
             # Assumes DEPTH is the final keyword describing grid structure (move 'break' if not)
             for line in fp:
-                item = line.split()
-                # Read DI
-                if item[0] == "DI" or item[0] == "*DI":
-                    if item[1] == "CON" or item[1] == "*CON":
-                        self.X = np.arange(0, float(item[2]) * (self.size[0] + 1), float(item[2]))
-                # Read DJ
-                elif item[0] == "DJ" or item[0] == "*DJ":
-                    if item[1] == "CON" or item[1] == "*CON":
-                        self.Y = np.arange(0, float(item[2]) * (self.size[1] + 1), float(item[2]))
-                # Read DK
-                elif item[0] == "DK" or item[0] == "*DK":
-                    if item[1] == "CON" or item[1] == "*CON":
+                item = [ i.strip('*') for i in line.split() ]
+                # Read Z-axis orientation
+                if item[0] == "KDIR" and item[1] == "DOWN": # K=1 is top layer
+                    kdir = 1
+                elif item[0] == "KDIR" and item[1] == "UP": # K=1 is bottom layer
+                    kdir = -1
+                # Read X-axis spacing
+                elif item[0] == "DI":
+                    if item[1] == "CON":
+                        self.X = np.linspace(0, float(item[2]) * self.size[0], self.size[0]+1)
+                # Read Y-axis spacing
+                elif item[0] == "DJ":
+                    if item[1] == "CON":
+                        self.Y = np.linspace(0, float(item[2]) * (self.size[1]), self.size[1]+1)
+                # Read Z-axis spacing
+                elif item[0] == "DK":
+                    if item[1] == "CON":
                         k_spacing = float(item[2])
                 # Read DEPTH (assumes of form *DEPTH *TOP I J K depth)
-                elif item[0] == "DEPTH" or item[0] == "*DEPTH":
+                elif item[0] == "DEPTH":
                     depth = float(item[5])
-                    self.Z = np.arange(depth, depth - (k_spacing * self.size[2]), -k_spacing)
+                    self.Z = np.linspace(depth, depth + (k_spacing * kdir * float(self.size[2])), self.size[2]+1)
                     break
 
         # Write cell vertex coordinates
@@ -1174,11 +1190,12 @@ class CMG(FlowGrid):
                 XX.extend(self.X)
                 YY.extend([self.Y[j]] * (self.size[0] + 1))
             ZZ.extend([self.Z[k]] * (self.size[0] + 1) * (self.size[1] + 1))
-        self.structured_grid(X, Y, Z)
+        self.structured_grid(XX, YY, ZZ)
 
     def read_CORNERS(self, fp):
         """
         Read corner point grid data from keyword *CORNERS
+
         Parameters
         ----------
         fp : textIOWrapper
@@ -1187,6 +1204,7 @@ class CMG(FlowGrid):
                     # move file pointer
                     ...
                     X, Y, Z = read_CORNERS(fp)
+
         Returns
         -------
         X : arary_like
@@ -1222,13 +1240,14 @@ class CMG(FlowGrid):
                     break
         sp = int(len(corners) / 3)
         X = list(map(float, corners[:sp]))
-        Y = list(map(float, corners[sp:2 * sp]))
-        Z = list(map(float, corners[2 * sp:]))
+        Y = list(map(float, corners[sp:2*sp]))
+        Z = list(map(float, corners[2*sp:]))
         return X, Y, Z
 
     def read_DIDJ(self, fp, d):
         """
         Read grid data from keyword *DI or *DJ
+
         Parameters
         ----------
         fp : textIOWrapper
@@ -1278,6 +1297,7 @@ class CMG(FlowGrid):
     def read_ZCORN(self, fp):
         """
         Read grid data from keyword *ZCORN
+
         Parameters
         ----------
         fp : textIOWrapper
@@ -1346,6 +1366,7 @@ class CMG(FlowGrid):
         Transforms coordinate data following Eclipse ZCORN ordering
         to coordinate data following VTK structured grid ordering
         (see 'Detailed Description' in vtkStructuredGrid class)
+
         Parameters
         ----------
         Data in input arrays has following structure:
@@ -1356,6 +1377,7 @@ class CMG(FlowGrid):
             for nj
                 NW-B, NE-B, ... for ni
                 SW-B, SE-B, ... for ni
+
         X : array_like
             Cell vertex x coordinates
         Y : array_like
@@ -1363,7 +1385,6 @@ class CMG(FlowGrid):
         Z : array_like
             Cell vertex z coordinates
         """
-
         def _write_coords(coord):
             XX.append(X[coord])
             YY.append(Y[coord])
@@ -1413,6 +1434,7 @@ class CMG(FlowGrid):
         Builds a VTS structured grid
         Assumes X, Y, Z coordinate arrays in correct order
         (see 'Detailed Description' in vtkStructuredGrid class for ordering)
+
         Parameters
         ----------
         X : array_like
@@ -1436,6 +1458,7 @@ class CMG(FlowGrid):
         **************
         IN DEVELOPMENT
         **************
+
         Transforms a structured grid to an unstructured one
         Unstructured grid will (eventually) allow us to implement
         locally refined grid (LGR) and irregular geometry
@@ -1505,6 +1528,7 @@ class CMG(FlowGrid):
     def read_prop(self, fname, prop, add=True, mult=1):
         """
         Reads input property from .dat file
+
         Parameters
         ----------
         fname: str
@@ -1519,6 +1543,7 @@ class CMG(FlowGrid):
             Multiplicative factor for scaling data
             Regrid leaves it to the user to determine when
             data needs to be scaled
+
         Returns
         -------
         data : array_like
@@ -1571,8 +1596,7 @@ class CMG(FlowGrid):
                     # If true, all values have been read
                     if count == self.size[0] * self.size[1] * self.size[2]:
                         data = np.array(data)
-                        # data = np.reshape(data, (self.size[0], self.size[1], self.size[2]), order="F")
-                        data = np.reshape(data, (self.size[2], self.size[1], self.size[0]), order="C")
+                        data = np.reshape(data, (self.size[0], self.size[1], self.size[2]), order="F")
                         break
             elif typeVal == '*CON':
                 data = np.full((self.size[0], self.size[1], self.size[2]), val)
@@ -1585,7 +1609,8 @@ class CMG(FlowGrid):
     def read_ext_prop(self, fname, prop_title, mult=1):
         """
         Reads a property from an external file denoted by INCLUDE in .DAT
-        Assumes that only data is contained in file (no keywords!)
+        Skips keywords at top of file, handles *MOD keyword at end of file
+
         Parameters
         ----------
         fname: str
@@ -1596,6 +1621,7 @@ class CMG(FlowGrid):
             Multiplicative factor for scaling data
             Regrid leaves it to the user to determine when
             data needs to be scaled
+
         Returns
         -------
         data : array_like
@@ -1604,9 +1630,22 @@ class CMG(FlowGrid):
         print('Reading ' + prop_title + ' input')
         data = []
         count = 0
+        modify = False
         with open(fname, "r") as fp:
             for line in fp:
+                if not line[:1].isdigit():
+                    if line.startswith('*MOD'):
+                        modify = True
+                    continue # it's a keyword
                 item = line.split()
+                if modify:
+                    i = int(item[0])-1
+                    j = int(item[1])-1
+                    K = [int(x)for x in item[2].split(':')]
+                    value = float(item[-1])
+                    for k in range(K[0]-1,K[1]):
+                        data[k,j,i] = value
+                    break
                 for attr in item:
                     if "*" in attr:
                         item = attr.split("*")
@@ -1619,15 +1658,15 @@ class CMG(FlowGrid):
                 # If true, all values have been read
                 if count == self.size[0] * self.size[1] * self.size[2]:
                     data = np.array(data)
-                    # data = np.reshape(data, (self.size[0], self.size[1], self.size[2]), order="C")
                     data = np.reshape(data, (self.size[2], self.size[1], self.size[0]), order="C")
-                    break
+                    continue
         self.add_data(data, prop_title)
         self.out_props[prop_title] = data
 
     def add_data(self, d, prop_title):
         """
         Adds data to a structured vtk grid
+
         Parameters
         ----------
         d : numpy_array
@@ -1681,13 +1720,13 @@ class CMG(FlowGrid):
                 if len(item) > 4:
                     if item[4] == 'All':
                         kLayer = self._k_full(item[7])
-                        layers[int(K) - 1] = kLayer
+                        layers[int(K)-1] = kLayer
                 else:
                     I = None
                     # layers[K] = {}
             if item[0] == 'I':
                 # if K == '1' and I is None:
-                # layers[K] = {}
+                    # layers[K] = {}
                 J = None
                 propIdxs = []
                 I = item[2:]
@@ -1705,7 +1744,7 @@ class CMG(FlowGrid):
                 JIdx = item[1]
                 J = item[2:]
                 # if JIdx not in layers[K].keys():
-                # layers[K-1][JIdx-1] = []
+                    # layers[K-1][JIdx-1] = []
                 for i in range(len(propIdxs)):
                     if line[propIdxs[i]] == ' ':
                         skipItem.append(i)
@@ -1713,10 +1752,10 @@ class CMG(FlowGrid):
                 for i in range(len(I)):
                     if i in skipItem:
                         # layers[K][JIdx].append('NULL')
-                        layers[int(JIdx) - 1][i] = 'NULL'
+                        layers[int(JIdx)-1][i] = 'NULL'
                         numSkips += 1
                     else:
-                        layers[int(JIdx) - 1][i] = J[i - numSkips]
+                        layers[int(JIdx)-1][i] = J[i - numSkips]
                         # layers[K][JIdx].append(J[i - numSkips])
             # Put entire grid worth of property in dictionary for current time step
             if I is not None and J is not None:
@@ -1746,6 +1785,7 @@ class CMG(FlowGrid):
         Reads per-cell output properties for every time step from .OUT file
         Properties available for reading determined by *OUTPRN *GRID
         If a cell property is empty in .OUT, then this will set it to null
+
         Parameters
         ----------
         fname : str
@@ -1806,7 +1846,7 @@ class CMG(FlowGrid):
                                     if item[4] == 'All':
                                         v = self._str_to_float(item[-1])
                                         k_layer = np.full((self.size[1], self.size[0]), v, order='F')
-                                        layers[int(K) - 1] = k_layer
+                                        layers[int(K)-1] = k_layer
                                         I = [self.size[0]]
                                         J = []
                                         JIdx = self.size[1]
@@ -1870,8 +1910,7 @@ class CMG(FlowGrid):
                                             refined = self.refine_outputs(fp, copy.deepcopy(refined_blocks))
                                             for c in list(refined.keys()):
                                                 idx = c.split(',')
-                                                self.out_props[attr_title][time][idx[2]][idx[1]][int(idx[0]) - 1] = \
-                                                refined[c]
+                                                self.out_props[attr_title][time][idx[2]][idx[1]][int(idx[0])-1] = refined[c]
                 if not found:
                     print(attr_title + ' was not found in output file!')
                     del self.out_props[attr_title]
@@ -1885,10 +1924,12 @@ class CMG(FlowGrid):
         To be used in grids with local grid refinement
         Inserts refined outputs into an LGR cell
         This reads the refinement blueprint for each cell, which can be fed to refine_outputs
+
         Parameters
         ----------
         fname : str
             Input file
+
         Returns
         -------
         refine_blocks : dict
@@ -1920,10 +1961,13 @@ class CMG(FlowGrid):
                                        J=  1   0.182    0.182    0.182
                                        J=  2   0.182    0.182    0.182
                                        J=  3   0.182    0.182    0.182
+
             Above is an example .OUT refinement
             We assume that the number of dashes is >= number of data items per line below
             This allows us to split data blocks based on number of dashes
+
             Currently, only 2D refiniements are supported
+
             Parameters
             ----------
             fp : textIOWrapper
@@ -1969,7 +2013,7 @@ class CMG(FlowGrid):
                 if len(line.strip('\n')) > 0:
                     # Use number of dashs to split lines of refinement data
                     data = [line[i:j] for i, j in zip(split_points, split_points[1:] + [None])]
-                    for i, d in enumerate(data):
+                    for i,d in enumerate(data):
                         if len(d) > 0:
                             if 'I' in d:
                                 d = d.rstrip()
@@ -1978,7 +2022,7 @@ class CMG(FlowGrid):
                             block[i].append(d)
                 # refinement lines has been read, process data
                 else:
-                    for i, d in enumerate(block):
+                    for i,d in enumerate(block):
                         dims = refined_blocks[idxs[i]]
                         refined_blocks[idxs[i]] = self.read_grid(d, dims)
                         blocks_to_process.remove(idxs[i])
@@ -1991,10 +2035,12 @@ class CMG(FlowGrid):
         """
         This should be ran before any other well operations are performed
         Builds a Wells object that contains dict of well init properties
+
         Parameters
         ----------
         fname : str
             File containing well init information
+
         Returns
         -------
         Wells : Wells object
@@ -2007,11 +2053,15 @@ class CMG(FlowGrid):
             for line in fp:
                 item = line.split()
                 if len(item) > 0:
-                    keyword = item[0]
+                    keyword = item[0].strip('*')
                     if getLoc:
-                        if item[0][0] == '*':
+                        if item[0][0] == '*' and item[0][1] == '*':
                             continue
-                        well['LOC'] = (int(item[0]), int(item[1]), int(item[2]))
+                        if ':' in item[2]:
+                            K = [int(x)for x in item[2].split(':')]
+                            well['LOC'] = (int(item[0]), int(item[1]), int(K[-1]))
+                        else:
+                            well['LOC'] = (int(item[0]), int(item[1]), int(item[2]))
                         getLoc = False
                     elif keyword == 'WELL':
                         # Add the previous well to the grid
@@ -2025,9 +2075,9 @@ class CMG(FlowGrid):
                     elif keyword == 'PRODUCER':
                         well['TYPE'] = 'PRO'
                     elif keyword == 'OPERATE':
-                        well['OP_MODE'].append(item[1])
-                        well['CON_TYPE'].append(item[2])
-                        well['CON_VAL'].append(item[3])
+                        well['OP_MODE'].append(item[1].strip('*'))
+                        well['CON_TYPE'].append(item[2].strip('*'))
+                        well['CON_VAL'].append(item[3].strip('*'))
                     elif keyword == 'PERF':
                         getLoc = True
             wells.append(well)
@@ -2038,9 +2088,11 @@ class CMG(FlowGrid):
         """
         NOTE: kind of awkward, but has its use cases for well viz
         Will probably be changed or removed at some point
+
         Adds well type/operational constraints to grid for vtk visualizations
         Labels injector well cells as 1, producer well cells as -1
         In Paraview, use Threshold filter to see these cells
+
         Parameters
         ----------
         wells : array_like of dict
@@ -2083,7 +2135,6 @@ class CMG(FlowGrid):
         Contains useful methods for working with wells
         Should not be called explicitely, use Grid.get_wells() to create
         """
-
         def __init__(self, wells, grid, times, out_dir):
             self.wells = wells
             self.grid = grid
@@ -2110,7 +2161,7 @@ class CMG(FlowGrid):
         def cell_verts(self, idx):
             coords = []
             xyz = [0, 0, 0]
-            cell = self.grid.GetCell(idx[0] - 1, idx[1] - 1, idx[2] - 1)
+            cell = self.grid.GetCell(idx[0]-1, idx[1]-1, idx[2]-1)
             p_ids = cell.GetPointIds()
             n_ids = p_ids.GetNumberOfIds()
             for n in range(n_ids):
@@ -2168,6 +2219,7 @@ class CMG(FlowGrid):
             has been loaded
             Grid.get_wells() must be called first to gather well info and create wells object
             Does not currently support wells with multiple perforations
+
             Parameters
             ----------
             vtk_fname : str
@@ -2176,6 +2228,7 @@ class CMG(FlowGrid):
                 Should match any Z-scaling (planning to be) applied to the grid in Paraview
             radius : float
                 Cylider radius
+
             Returns
             -------
             py_file : .py file
@@ -2195,7 +2248,7 @@ class CMG(FlowGrid):
                     if t_v[2] < minZ:
                         minZ = t_v[2]
                 cyl_height = abs(b_v[2] - minZ)
-                cyl_center = [b_v[0], b_v[1], minZ + cyl_height / 2]
+                cyl_center = [b_v[0], b_v[1], minZ + cyl_height/2]
                 centers.append(cyl_center)
                 heights.append(cyl_height)
             # Write center, height data to string
@@ -2233,6 +2286,7 @@ class CMG(FlowGrid):
             Reads well response/output information for all time steps
             The properties being read are located at the 'GEM FIELD SUMMARY'
             at each time step
+
             Parameters
             ----------
             fname : str
@@ -2249,6 +2303,7 @@ class CMG(FlowGrid):
                     (make sure this order is correct!)
                 ex) This example goes along with the keys example above:
                     [['Bottom Hole', 'Drawdown'], ['Oil', 'Water', 'Gas']]
+
             Returns
             -------
             well_out : dict
@@ -2266,7 +2321,7 @@ class CMG(FlowGrid):
             order = self._out_order(fname)
             # Initialize output dictionary
             well_out = {}
-            for i, key in enumerate(keys):
+            for i,key in enumerate(keys):
                 well_out[key] = {}
                 for subkey in subkeys[i]:
                     well_out[key][subkey] = {}
@@ -2320,7 +2375,7 @@ class CMG(FlowGrid):
                 for subkey in well_out[key]:
                     # for t in range(1, len(self.times)):
                     for t in well_out[key][subkey]:
-                        well_out[key][subkey][t] = {k: v for k, v in zip(order[t], well_out[key][subkey][t])}
+                        well_out[key][subkey][t] = {k:v for k,v in zip(order[t], well_out[key][subkey][t])}
             return well_out
 
     def _prep_vtk(self, data, prop, propIds):
@@ -2336,6 +2391,7 @@ class CMG(FlowGrid):
     def export_grid(self, vtk_fname='GRID', toVTK=True, toNumpy=True):
         """
         Export grid information to Numpy or VTK files after all data has been read
+
         Parameters
         ----------
         vtk_fname : str
@@ -2388,19 +2444,22 @@ class CMG(FlowGrid):
     def export_prop(self, d, title, t):
         """
         Exports a Numpy array of a grid property for a given timestep
+
         d : array_like
             Grid data to be saved
         title : str
             Name for the data
         t : int
             Current timestep id
+
         """
         self._check_out(title)
-        np.save(os.path.join(self.out_dir, title, title + '_' + str(t)), d)
+        np.savez_compressed(os.path.join(self.out_dir, title, title + '_' + str(t)), d)
 
     def export_wells(self, w, title):
         """
         Exports well dictionaries as a Numpy file
+
         Parameters
         ----------
         w : dict
@@ -2411,15 +2470,13 @@ class CMG(FlowGrid):
             Name for the data
         """
         self._check_out(title)
-        np.save(os.path.join(self.out_dir, title), w)
-
+        np.savez_compressed(os.path.join(self.out_dir, title, title), w)
 
 # TODO: under development
 class DynamicGrid:
     """
     UNDER DEVELOPMENT
     """
-
     def __init__(self, wells, grid, times, out_dir):
         self.wells = wells
         self.grid = grid
