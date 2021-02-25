@@ -1452,55 +1452,100 @@ class CMG(FlowGrid):
             vtk_points.InsertNextPoint(X[point], Y[point], Z[point])
         self.Grid.SetPoints(vtk_points)
 
-    # ExPeRiMeNtAl - doesn't work yet (but will be pretty darn cool when it does)
-    def unstructured_grid(self):
+    def unstructured_grid(self, X, Y, Z):
         """
-        **************
-        IN DEVELOPMENT
-        **************
-
-        Transforms a structured grid to an unstructured one
-        Unstructured grid will (eventually) allow us to implement
-        locally refined grid (LGR) and irregular geometry
+        EXPERIMENTAL
+        Builds a vtk unstructured grid (vtu)
         """
-        # TODO: change hardcoded 'POR'
-        t = vtk.vtkThreshold()
-        t.SetInputDataObject(self.Grid)
-        t.SetInputArrayToProcess(0, 0, 0, self.Grid.FIELD_ASSOCIATION_CELLS, "POR")
-        t.ThresholdByUpper(-1)
-        t.Update()
-
-        ug = t.GetOutput()
-
-        test_ids = vtk.vtkIdList()
-        test_ids.InsertNextId(1)
-
-        ug.GetCellPoints(1, test_ids)
-        ########
-
-        self.GridType = "vtkUnstructuredGrid"
+        uX = []
+        uY = []
+        uZ = []
+        l = self.size[0] * self.size[1]
         self.Grid = vtk.vtkUnstructuredGrid()
-        vtk_points = vtk.vtkPoints()
+        for k in range(self.size[2]):
+            n = 0
+            for j in range(self.size[1]):
+                for i in range(self.size[0]):
+                    # SW-B
+                    swb = 8 * k * l + 4 * l + 2 * self.size[0] * (j + 1) + 2 * n
+                    uX.append(X[swb])
+                    uY.append(Y[swb])
+                    uZ.append(Z[swb])
+                    # SE-B
+                    seb = 8 * k * l + 4 * l + 2 * self.size[0] * (j + 1) + 2 * n + 1
+                    uX.append(X[seb])
+                    uY.append(Y[seb])
+                    uZ.append(Z[seb])
+                    # NE-B
+                    neb = 8 * k * l + 4 * l + 2 * self.size[0] * j + 2 * n + 1
+                    uX.append(X[neb])
+                    uY.append(Y[neb])
+                    uZ.append(Z[neb])
+                    # NW-B
+                    nwb = 8 * k * l + 4 * l + 2 * self.size[0] * j + 2 * n
+                    uX.append(X[nwb])
+                    uY.append(Y[nwb])
+                    uZ.append(Z[nwb])
+                    # SW-T
+                    swt = 8 * k * l + 2 * self.size[0] * (j + 1) + 2 * n
+                    uX.append(X[swt])
+                    uY.append(Y[swt])
+                    uZ.append(Z[swt])
+                    # SE-T
+                    sett = 8 * k * l + 2 * self.size[0] * (j + 1) + 2 * n + 1
+                    uX.append(X[sett])
+                    uY.append(Y[sett])
+                    uZ.append(Z[sett])
+                    # NE-T
+                    net = 8 * k * l + 2 * self.size[0] * j + 2 * n + 1
+                    uX.append(X[net])
+                    uY.append(Y[net])
+                    uZ.append(Z[net])
+                    # NW-T
+                    nwt = 8 * k * l + 2 * self.size[0] * j + 2 * n
+                    uX.append(X[nwt])
+                    uY.append(Y[nwt])
+                    uZ.append(Z[nwt])
 
-        for point in range(np.shape(points)[0]):
-            vtk_points.InsertNextPoint(points[point, 0], points[point, 1], points[point, 2])
-        self.Grid.SetPoints(vtk_points)
+                    n += 1
 
-        # Read in the connections, the format is as follows
-        #  nodeid    p0, p1, p2, p3, p4, p5, p6, p7, p8
-        C = np.loadtxt(connections, comments="#", skiprows=2, dtype=int)
-        for line in range(np.shape(C)[0]):
-            idList = vtk.vtkIdList()
-            for node in C[line, :][1:]:
-                idList.InsertNextId(node - 1)
-            self.Grid.InsertNextCell(vtk.VTK_HEXAHEDRON, idList)
+        # Set points
+        points = vtk.vtkPoints()
+        points.SetNumberOfPoints(2 * self.size[0] * 2 * self.size[1] * 2 * self.size[2])
+        for i in range(len(uX)):
+            points.SetPoint(i, [uX[i], uY[i], uZ[i]])
+        self.Grid.SetPoints(points)
 
-        ########
-        ug = vtk.vtkXMLUnstructuredGridWriter()
-        ug.SetDataModeToAscii()
-        ug.SetFileName('unstructured_grid.vtu')
-        ug.SetInputConnection(t.GetOutputPort())
-        ug.Write()
+        # Set cells
+        cells = vtk.vtkCellArray()
+        cell = vtk.vtkHexahedron()
+        for i in range(len(uX)):
+            if i > 0 and i % 8 == 0:
+                cells.InsertNextCell(cell)
+            cell.GetPointIds().SetId(i % 8, i)
+        cells.InsertNextCell(cell)
+
+        self.Grid.SetCells(cell.GetCellType(), cells)
+
+    def vtp(self, f_vtu, f_vtp):
+        """
+        EXPERIMENTAL
+        Transforms a .vtu file to a .vtp file for visualization within GeometryViewer.js (vtk.js)
+        For visualization inside of a web browser
+        """
+        reader = vtk.vtkXMLUnstructuredGridReader()
+        reader.SetFileName(f_vtu)
+        reader.Update()
+        ugrid = reader.GetOutput()
+        geometryFilter = vtk.vtkGeometryFilter()
+        geometryFilter.SetInputData(ugrid)
+        geometryFilter.Update()
+        polydata = geometryFilter.GetOutput()
+        writer =vtk.vtkXMLPolyDataWriter()
+        writer.SetFileName(f_vtp)
+        writer.SetInputData(polydata)
+        writer.Write()
+        print("vtp file created.")
 
     def buildActiveCells(self, fp):
         """
