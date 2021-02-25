@@ -1596,10 +1596,10 @@ class CMG(FlowGrid):
                     # If true, all values have been read
                     if count == self.size[0] * self.size[1] * self.size[2]:
                         data = np.array(data)
-                        data = np.reshape(data, (self.size[0], self.size[1], self.size[2]), order="F")
+                        data = np.reshape(data, (self.size[2], self.size[1], self.size[0]), order="C")
                         break
             elif typeVal == '*CON':
-                data = np.full((self.size[0], self.size[1], self.size[2]), val)
+                data = np.full((self.size[2], self.size[1], self.size[0]), val)
 
         if add:
             self.add_data(data, prop)
@@ -1676,7 +1676,7 @@ class CMG(FlowGrid):
         """
         ac = vtk.vtkDoubleArray()
         ac.SetName(prop_title)
-        for iac in d.flatten(order='F'):
+        for iac in d.flatten(order='C'):
             ac.InsertNextTuple1(iac)
         self.Grid.GetCellData().AddArray(ac)
 
@@ -1835,7 +1835,7 @@ class CMG(FlowGrid):
                         if build:
                             if item[0] == 'All':
                                 v = self._str_to_float(item[3])
-                                grid = np.full((self.size[2], self.size[1], self.size[0]), v, order='F')
+                                grid = np.full((self.size[2], self.size[1], self.size[0]), v)
                                 self.out_props[attr_title][time] = grid
                                 build = False
                                 continue
@@ -1845,7 +1845,7 @@ class CMG(FlowGrid):
                                 if len(item) > 4:
                                     if item[4] == 'All':
                                         v = self._str_to_float(item[-1])
-                                        k_layer = np.full((self.size[1], self.size[0]), v, order='F')
+                                        k_layer = np.full((self.size[1], self.size[0]), v)
                                         layers[int(K)-1] = k_layer
                                         I = [self.size[0]]
                                         J = []
